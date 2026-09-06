@@ -17,7 +17,7 @@ module.exports = {
       )),
 
   async execute(interaction) {
-    // ====== SÓ VOCÊ PODE USAR ======
+    // ====== SÓ O DONO PODE USAR ======
     const OWNER_ID = '1320305759120134174';
     
     if (interaction.user.id !== OWNER_ID) {
@@ -29,11 +29,10 @@ module.exports = {
 
     try {
       const tipo = interaction.options.getString('tipo');
-      
-      // PEGA O ID DO SERVIDOR DIRETO
       const guildId = interaction.guildId;
       const guildName = interaction.guild ? interaction.guild.name : 'Servidor Desconhecido';
 
+      // ====== DEFINIR DIAS ======
       let dias;
       let tipoLabel;
       
@@ -45,10 +44,10 @@ module.exports = {
         tipoLabel = `📅 ${dias} Dias`;
       }
 
-      // GERAR LICENÇA
+      // ====== GERAR LICENÇA ======
       const license = generateLicense(guildId, interaction.user.username, dias);
 
-      // TENTAR PEGAR O DONO
+      // ====== PEGAR DONO DO SERVIDOR ======
       let ownerName = 'Dono do Servidor';
       try {
         if (interaction.guild) {
@@ -61,6 +60,7 @@ module.exports = {
         console.log('⚠️ Não foi possível buscar o dono:', error.message);
       }
 
+      // ====== EMBED ======
       const embed = new EmbedBuilder()
         .setTitle('🔑 Licença Gerada!')
         .setColor(tipo === 'vitalicio' ? '#FFD700' : '#00FF00')
@@ -75,6 +75,7 @@ module.exports = {
 
       await interaction.reply({ embeds: [embed] });
 
+      // ====== MENSAGEM COM O CÓDIGO ======
       await interaction.followUp({
         content: `📝 **Mande este código para o dono do servidor:**\n\`\`\`${license.code}\`\`\`\nEle deve usar \`/verificar ${license.code}\` para ativar.`
       });
