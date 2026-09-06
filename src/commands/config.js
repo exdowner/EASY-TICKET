@@ -32,19 +32,19 @@ module.exports = {
         const category = interaction.options.getChannel('categoria');
         updateConfig(guildId, { categoryId: category.id });
         embed.setTitle('✅ Categoria Definida')
-          .setDescription(`📁 **${category.name}** (ID: \`${category.id}\`)`);
+          .setDescription(`📁 **${category.name}**`);
       } 
       else if (sub === 'support') {
         const role = interaction.options.getRole('cargo');
         updateConfig(guildId, { supportRoleId: role.id });
         embed.setTitle('✅ Cargo de Suporte Definido')
-          .setDescription(`👤 **${role.name}** (ID: \`${role.id}\`)`);
+          .setDescription(`👤 **${role.name}**`);
       } 
       else if (sub === 'logs') {
         const channel = interaction.options.getChannel('canal');
         updateConfig(guildId, { logChannelId: channel.id });
         embed.setTitle('✅ Canal de Logs Definido')
-          .setDescription(`📝 **${channel.name}** (ID: \`${channel.id}\`)`);
+          .setDescription(`📝 **${channel.name}**`);
       }
 
       await interaction.reply({ embeds: [embed], ephemeral: true });
