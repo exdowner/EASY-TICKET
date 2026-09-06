@@ -27,47 +27,48 @@ module.exports = {
       });
     }
 
-    const tipo = interaction.options.getString('tipo');
-    const guildId = interaction.guildId;
+    try {
+      const tipo = interaction.options.getString('tipo');
+      const guildId = interaction.guildId;
 
-    // ====== DEFINIR DIAS ======
-    let dias;
-    let tipoLabel;
-    
-    if (tipo === 'vitalicio') {
-      dias = 99999; // Número gigante pra nunca expirar
-      tipoLabel = '♾️ Vitalício';
-    } else {
-      dias = parseInt(tipo);
-      tipoLabel = `📅 ${dias} Dias`;
+      let dias;
+      let tipoLabel;
+      
+      if (tipo === 'vitalicio') {
+        dias = 99999;
+        tipoLabel = '♾️ Vitalício';
+      } else {
+        dias = parseInt(tipo);
+        tipoLabel = `📅 ${dias} Dias`;
+      }
+
+      const license = generateLicense(guildId, interaction.user.username, dias);
+      const guildOwner = await interaction.guild.fetchOwner();
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 Licença Gerada!')
+        .setColor(tipo === 'vitalicio' ? '#FFD700' : '#00FF00')
+        .setDescription(`**Código:** \`${license.code}\``)
+        .addFields(
+          { name: '📅 Validade', value: tipoLabel, inline: true },
+          { name: '👑 Servidor', value: interaction.guild.name, inline: true },
+          { name: '👤 Dono', value: guildOwner.user.username, inline: true }
+        )
+        .setFooter({ text: `Gerado por ${interaction.user.username}` })
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+
+      await interaction.followUp({
+        content: `📝 **Mande este código para o dono do servidor:**\n\`\`\`${license.code}\`\`\`\nEle deve usar \`/verificar ${license.code}\` para ativar.`,
+        ephemeral: false
+      });
+    } catch (error) {
+      console.error('Erro no /gerar:', error);
+      await interaction.reply({
+        content: '❌ Erro ao gerar licença. Verifique os logs.',
+        ephemeral: true
+      });
     }
-
-    // ====== GERAR LICENÇA ======
-    const license = generateLicense(guildId, interaction.user.username, dias);
-
-    // ====== PEGAR DONO DO SERVIDOR ======
-    const guildOwner = await interaction.guild.fetchOwner();
-    const ownerName = guildOwner.user.username;
-
-    // ====== EMBED ======
-    const embed = new EmbedBuilder()
-      .setTitle('🔑 Licença Gerada!')
-      .setColor(tipo === 'vitalicio' ? '#FFD700' : '#00FF00')
-      .setDescription(`**Código:** \`${license.code}\``)
-      .addFields(
-        { name: '📅 Validade', value: tipoLabel, inline: true },
-        { name: '👑 Servidor', value: interaction.guild.name, inline: true },
-        { name: '👤 Dono', value: ownerName, inline: true }
-      )
-      .setFooter({ text: `Gerado por ${interaction.user.username}` })
-      .setTimestamp();
-
-    await interaction.reply({ embeds: [embed] });
-
-    // ====== MENSAGEM COM O CÓDIGO ======
-    await interaction.followUp({
-      content: `📝 **Mande este código para o dono do servidor:**\n\`\`\`${license.code}\`\`\`\nEle deve usar \`/verificar ${license.code}\` para ativar.`,
-      ephemeral: false
-    });
   }
 };
