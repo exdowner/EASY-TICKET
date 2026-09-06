@@ -1,0 +1,18 @@
+{
+  "name": "easy-ticket",
+  "version": "2.0.0",
+  "description": "Sistema de tickets para Discord",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-cron": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
