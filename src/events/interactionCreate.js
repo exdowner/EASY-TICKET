@@ -13,10 +13,11 @@ module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
     // ====== VERIFICAR LICENÇA ======
-    // Comandos que NÃO precisam de licença
+    // Comandos que NÃO precisam de licença (públicos)
     const publicCommands = ['verificar', 'gerar'];
     
-    if (!publicCommands.includes(interaction.commandName) && interaction.isCommand()) {
+    // Se for um comando slash e NÃO estiver na lista de públicos
+    if (interaction.isCommand() && !publicCommands.includes(interaction.commandName)) {
       const license = verifyLicenseByGuild(interaction.guildId);
       
       if (!license) {
@@ -30,7 +31,7 @@ module.exports = {
       }
     }
 
-    // ====== BOTÕES E SELECT MENU ======
+    // ====== SÓ PROCESSAR BOTÕES E SELECT MENU DAQUI PRA BAIXO ======
     if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
 
     const config = getConfig(interaction.guildId);
