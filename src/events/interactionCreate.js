@@ -14,7 +14,7 @@ module.exports = {
   async execute(interaction) {
     // ====== VERIFICAR LICENÇA ======
     // Comandos que NÃO precisam de licença
-    const publicCommands = ['verificar'];
+    const publicCommands = ['verificar', 'gerar'];
     
     if (!publicCommands.includes(interaction.commandName) && interaction.isCommand()) {
       const license = verifyLicenseByGuild(interaction.guildId);
