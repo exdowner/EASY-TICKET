@@ -28,17 +28,11 @@ module.exports = {
     }
 
     try {
-      // ====== VERIFICAR SE É UM SERVIDOR ======
-      if (!interaction.guild) {
-        return interaction.reply({
-          content: '❌ Este comando só pode ser usado em um servidor!',
-          ephemeral: true
-        });
-      }
-
       const tipo = interaction.options.getString('tipo');
+      
+      // PEGA O ID DO SERVIDOR DIRETO
       const guildId = interaction.guildId;
-      const guildName = interaction.guild.name;
+      const guildName = interaction.guild ? interaction.guild.name : 'Servidor Desconhecido';
 
       let dias;
       let tipoLabel;
@@ -51,23 +45,22 @@ module.exports = {
         tipoLabel = `📅 ${dias} Dias`;
       }
 
-      // ====== GERAR LICENÇA ======
+      // GERAR LICENÇA
       const license = generateLicense(guildId, interaction.user.username, dias);
 
-      // ====== TENTAR PEGAR O DONO DO SERVIDOR ======
-      let ownerName = 'Desconhecido';
+      // TENTAR PEGAR O DONO
+      let ownerName = 'Dono do Servidor';
       try {
-        const guildOwner = await interaction.guild.fetchOwner();
-        if (guildOwner && guildOwner.user) {
-          ownerName = guildOwner.user.username;
+        if (interaction.guild) {
+          const guildOwner = await interaction.guild.fetchOwner();
+          if (guildOwner) {
+            ownerName = guildOwner.user.username;
+          }
         }
       } catch (error) {
-        console.log('⚠️ Não foi possível buscar o dono do servidor:', error.message);
-        // Se não conseguir pegar o dono, usa um nome genérico
-        ownerName = 'Dono do Servidor';
+        console.log('⚠️ Não foi possível buscar o dono:', error.message);
       }
 
-      // ====== EMBED ======
       const embed = new EmbedBuilder()
         .setTitle('🔑 Licença Gerada!')
         .setColor(tipo === 'vitalicio' ? '#FFD700' : '#00FF00')
@@ -82,7 +75,6 @@ module.exports = {
 
       await interaction.reply({ embeds: [embed] });
 
-      // ====== MENSAGEM COM O CÓDIGO ======
       await interaction.followUp({
         content: `📝 **Mande este código para o dono do servidor:**\n\`\`\`${license.code}\`\`\`\nEle deve usar \`/verificar ${license.code}\` para ativar.`
       });
@@ -90,7 +82,7 @@ module.exports = {
     } catch (error) {
       console.error('❌ Erro no /gerar:', error);
       await interaction.reply({
-        content: '❌ Erro ao gerar licença. Verifique os logs.',
+        content: `❌ Erro ao gerar licença: ${error.message}`,
         ephemeral: true
       });
     }
