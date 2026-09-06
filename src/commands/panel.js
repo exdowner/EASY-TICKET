@@ -9,14 +9,6 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      // ====== VERIFICA SE O CANAL EXISTE ======
-      if (!interaction.channel) {
-        return interaction.reply({
-          content: '❌ Não foi possível encontrar o canal. Use o comando em um canal de texto.',
-          ephemeral: true
-        });
-      }
-
       const config = getConfig(interaction.guildId);
       
       if (!config || !config.categoryId || !config.supportRoleId) {
@@ -50,7 +42,7 @@ module.exports = {
             .setStyle(ButtonStyle.Secondary)
         );
 
-      // ====== ENVIA O PAINEL NO CANAL ======
+      // ====== MANDA DIRETO NO CANAL QUE O COMANDO FOI USADO ======
       await interaction.channel.send({
         embeds: [embed],
         components: [row]
@@ -63,16 +55,10 @@ module.exports = {
 
     } catch (error) {
       console.error('❌ Erro no /panel:', error);
-      
-      // Tenta responder de qualquer jeito
-      try {
-        await interaction.reply({
-          content: `❌ Erro ao criar painel: ${error.message}`,
-          ephemeral: true
-        });
-      } catch (e) {
-        console.error('❌ Erro ao responder:', e);
-      }
+      await interaction.reply({
+        content: `❌ Erro ao criar painel: ${error.message}`,
+        ephemeral: true
+      });
     }
   }
 };
