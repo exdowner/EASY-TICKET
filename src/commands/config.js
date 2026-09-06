@@ -31,35 +31,20 @@ module.exports = {
       if (sub === 'category') {
         const category = interaction.options.getChannel('categoria');
         updateConfig(guildId, { categoryId: category.id });
-        
         embed.setTitle('✅ Categoria Definida')
-          .setDescription(`📁 Tickets serão criados em: **${category.name}**`)
-          .addFields(
-            { name: 'ID', value: `\`${category.id}\``, inline: true },
-            { name: 'Tipo', value: 'Categoria', inline: true }
-          );
+          .setDescription(`📁 **${category.name}** (ID: \`${category.id}\`)`);
       } 
       else if (sub === 'support') {
         const role = interaction.options.getRole('cargo');
         updateConfig(guildId, { supportRoleId: role.id });
-        
         embed.setTitle('✅ Cargo de Suporte Definido')
-          .setDescription(`👤 Equipe de suporte: **${role.name}**`)
-          .addFields(
-            { name: 'ID', value: `\`${role.id}\``, inline: true },
-            { name: 'Membros', value: `${role.members.size} membros`, inline: true }
-          );
+          .setDescription(`👤 **${role.name}** (ID: \`${role.id}\`)`);
       } 
       else if (sub === 'logs') {
         const channel = interaction.options.getChannel('canal');
         updateConfig(guildId, { logChannelId: channel.id });
-        
         embed.setTitle('✅ Canal de Logs Definido')
-          .setDescription(`📝 Logs serão enviados em: **${channel.name}**`)
-          .addFields(
-            { name: 'ID', value: `\`${channel.id}\``, inline: true },
-            { name: 'Tipo', value: channel.type === 0 ? 'Texto' : 'Outro', inline: true }
-          );
+          .setDescription(`📝 **${channel.name}** (ID: \`${channel.id}\`)`);
       }
 
       await interaction.reply({ embeds: [embed], ephemeral: true });

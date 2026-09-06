@@ -9,14 +9,6 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      // ====== VERIFICAR SE É UM CANAL DE TEXTO ======
-      if (!interaction.channel || !interaction.channel.isTextBased()) {
-        return interaction.reply({
-          content: '❌ Este comando só pode ser usado em um canal de texto!',
-          ephemeral: true
-        });
-      }
-
       const config = getConfig(interaction.guildId);
       
       if (!config || !config.categoryId || !config.supportRoleId) {
@@ -50,7 +42,6 @@ module.exports = {
             .setStyle(ButtonStyle.Secondary)
         );
 
-      // ====== ENVIAR O PAINEL ======
       await interaction.channel.send({
         embeds: [embed],
         components: [row]
