@@ -32,7 +32,6 @@ module.exports = {
       const guildId = interaction.guildId;
       const guildName = interaction.guild ? interaction.guild.name : 'Servidor Desconhecido';
 
-      // ====== DEFINIR DIAS ======
       let dias;
       let tipoLabel;
       
@@ -44,23 +43,18 @@ module.exports = {
         tipoLabel = `📅 ${dias} Dias`;
       }
 
-      // ====== GERAR LICENÇA ======
       const license = generateLicense(guildId, interaction.user.username, dias);
 
-      // ====== PEGAR DONO DO SERVIDOR ======
       let ownerName = 'Dono do Servidor';
       try {
         if (interaction.guild) {
           const guildOwner = await interaction.guild.fetchOwner();
-          if (guildOwner) {
-            ownerName = guildOwner.user.username;
-          }
+          if (guildOwner) ownerName = guildOwner.user.username;
         }
       } catch (error) {
-        console.log('⚠️ Não foi possível buscar o dono:', error.message);
+        console.log('⚠️ Erro ao buscar dono:', error.message);
       }
 
-      // ====== EMBED ======
       const embed = new EmbedBuilder()
         .setTitle('🔑 Licença Gerada!')
         .setColor(tipo === 'vitalicio' ? '#FFD700' : '#00FF00')
@@ -73,11 +67,16 @@ module.exports = {
         .setFooter({ text: `Gerado por ${interaction.user.username}` })
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      // ====== RESPOSTA EFÊMERA (SÓ VOCÊ VÊ) ======
+      await interaction.reply({
+        embeds: [embed],
+        ephemeral: true  // <--- SÓ VOCÊ VÊ
+      });
 
-      // ====== MENSAGEM COM O CÓDIGO ======
+      // ====== MENSAGEM COM O CÓDIGO TAMBÉM EFÊMERA ======
       await interaction.followUp({
-        content: `📝 **Mande este código para o dono do servidor:**\n\`\`\`${license.code}\`\`\`\nEle deve usar \`/verificar ${license.code}\` para ativar.`
+        content: `📝 **Mande este código para o dono do servidor:**\n\`\`\`${license.code}\`\`\`\nEle deve usar \`/verificar ${license.code}\` para ativar.`,
+        ephemeral: true  // <--- SÓ VOCÊ VÊ
       });
 
     } catch (error) {
