@@ -18,6 +18,16 @@ module.exports = {
         });
       }
 
+      // ====== PEGA O CANAL ONDE O COMANDO FOI EXECUTADO ======
+      const channel = interaction.channel;
+      
+      if (!channel) {
+        return interaction.reply({
+          content: '❌ Não foi possível encontrar o canal. Certifique-se de que o bot tem permissão para ver este canal.',
+          ephemeral: true
+        });
+      }
+
       const embed = new EmbedBuilder()
         .setTitle('🎫 EASY TICKET')
         .setDescription('Clique no botão abaixo para abrir um ticket!')
@@ -42,11 +52,19 @@ module.exports = {
             .setStyle(ButtonStyle.Secondary)
         );
 
-      // ====== MANDA DIRETO NO CANAL QUE O COMANDO FOI USADO ======
-      await interaction.channel.send({
-        embeds: [embed],
-        components: [row]
-      });
+      // ====== TENTA ENVIAR NO CANAL ======
+      try {
+        await channel.send({
+          embeds: [embed],
+          components: [row]
+        });
+      } catch (sendError) {
+        console.error('❌ Erro ao enviar mensagem no canal:', sendError);
+        return interaction.reply({
+          content: `❌ Não foi possível enviar o painel neste canal. Verifique se o bot tem permissão para enviar mensagens aqui.\n\nErro: ${sendError.message}`,
+          ephemeral: true
+        });
+      }
 
       await interaction.reply({
         content: '✅ Painel criado com sucesso!',
@@ -55,10 +73,15 @@ module.exports = {
 
     } catch (error) {
       console.error('❌ Erro no /panel:', error);
-      await interaction.reply({
-        content: `❌ Erro ao criar painel: ${error.message}`,
-        ephemeral: true
-      });
+      
+      try {
+        await interaction.reply({
+          content: `❌ Erro ao criar painel: ${error.message}`,
+          ephemeral: true
+        });
+      } catch (replyError) {
+        console.error('❌ Erro ao responder:', replyError);
+      }
     }
   }
 };
