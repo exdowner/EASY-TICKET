@@ -7,10 +7,30 @@ const {
   updateTicket,
   incrementTicketCounter 
 } = require('../database/database');
+const { verifyLicenseByGuild } = require('../database/licenses');
 
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
+    // ====== VERIFICAR LICENÇA ======
+    // Comandos que NÃO precisam de licença
+    const publicCommands = ['verificar'];
+    
+    if (!publicCommands.includes(interaction.commandName) && interaction.isCommand()) {
+      const license = verifyLicenseByGuild(interaction.guildId);
+      
+      if (!license) {
+        return interaction.reply({
+          content: '🔐 **Servidor não licenciado!**\n\n' +
+                   'Para liberar o EASY TICKET neste servidor, use:\n' +
+                   '`/verificar CODIGO`\n\n' +
+                   'Entre em contato para adquirir uma licença.',
+          ephemeral: true
+        });
+      }
+    }
+
+    // ====== BOTÕES E SELECT MENU ======
     if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
 
     const config = getConfig(interaction.guildId);
