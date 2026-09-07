@@ -3,7 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const cron = require('node-cron');
+const mongoose = require('mongoose');
 require('dotenv').config();
+
+// ============ MONGODB ============
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('✅ MongoDB conectado'))
+  .catch(err => console.error('❌ Erro MongoDB:', err));
 
 // ============ SERVIDOR WEB ============
 const app = express();
