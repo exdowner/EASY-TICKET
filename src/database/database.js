@@ -1,33 +1,63 @@
 const fs = require('fs');
 const path = require('path');
 
-// ====== PASTA PERSISTENTE ======
-const DATA_DIR = process.env.RENDER ? '/tmp/easy-ticket-data' : path.join(__dirname, '..', 'data');
+// ====== TENTA VÁRIOS LOCAIS E CRIA ======
+const possiblePaths = [
+  '/tmp/easy-ticket-data',
+  '/data/easy-ticket-data',
+  path.join(__dirname, '..', 'data')
+];
+
+let DATA_DIR = null;
+for (const p of possiblePaths) {
+  try {
+    if (!fs.existsSync(p)) {
+      fs.mkdirSync(p, { recursive: true });
+      console.log(`📁 Pasta criada: ${p}`);
+    } else {
+      console.log(`✅ Pasta existe: ${p}`);
+    }
+    DATA_DIR = p;
+    break;
+  } catch (e) {
+    console.log(`❌ Falha em ${p}:`, e.message);
+  }
+}
+
+// Fallback: pasta local
+if (!DATA_DIR) {
+  DATA_DIR = path.join(__dirname, '..', 'data');
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  console.log(`✅ Fallback: ${DATA_DIR}`);
+}
+
 const CONFIGS_FILE = path.join(DATA_DIR, 'configs.json');
 const TICKETS_FILE = path.join(DATA_DIR, 'tickets.json');
 const LICENSES_FILE = path.join(DATA_DIR, 'licenses.json');
 
-// ====== CRIAR PASTA SE NÃO EXISTIR ======
-if (!fs.existsSync(DATA_DIR)) {
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    console.log(`📁 Pasta criada: ${DATA_DIR}`);
-  } catch (e) {
-    console.error('❌ Erro ao criar pasta:', e);
-  }
+// Inicializa os arquivos se não existirem
+function initFiles() {
+  [CONFIGS_FILE, TICKETS_FILE, LICENSES_FILE].forEach(file => {
+    if (!fs.existsSync(file)) {
+      fs.writeFileSync(file, JSON.stringify([]));
+      console.log(`📄 Arquivo criado: ${path.basename(file)}`);
+    }
+  });
 }
+initFiles();
 
-// ====== FUNÇÕES AUXILIARES ======
+// ====== FUNÇÕES ======
 function readJSON(file) {
   try {
     if (!fs.existsSync(file)) {
       fs.writeFileSync(file, JSON.stringify([]));
       return [];
     }
-    const data = fs.readFileSync(file, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('❌ Erro ao ler arquivo:', error);
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (e) {
+    console.error('❌ Erro ao ler:', e);
     return [];
   }
 }
@@ -36,8 +66,8 @@ function writeJSON(file, data) {
   try {
     fs.writeFileSync(file, JSON.stringify(data, null, 2));
     return true;
-  } catch (error) {
-    console.error('❌ Erro ao escrever arquivo:', error);
+  } catch (e) {
+    console.error('❌ Erro ao escrever:', e);
     return false;
   }
 }
@@ -113,9 +143,9 @@ function generateLicense(guildId, buyerName, days = 30) {
   const code = Math.random().toString(36).substring(2, 10).toUpperCase();
   
   const license = {
-    code: code,
-    guildId: guildId,
-    buyerName: buyerName,
+    code,
+    guildId,
+    buyerName,
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString(),
     status: 'active'
@@ -128,25 +158,22 @@ function generateLicense(guildId, buyerName, days = 30) {
 
 function verifyLicenseByCode(code) {
   const licenses = getLicenses();
-  const license = licenses.find(l => 
+  return licenses.find(l => 
     l.code === code && 
     l.status === 'active' &&
     new Date(l.expiresAt) > new Date()
-  );
-  return license || null;
+  ) || null;
 }
 
 function verifyLicenseByGuild(guildId) {
   const licenses = getLicenses();
-  const license = licenses.find(l => 
+  return licenses.find(l => 
     l.guildId === guildId && 
     l.status === 'active' &&
     new Date(l.expiresAt) > new Date()
-  );
-  return license || null;
+  ) || null;
 }
 
-// ====== EXPORTAR ======
 module.exports = {
   getConfig,
   updateConfig,
@@ -155,7 +182,6 @@ module.exports = {
   getTicket,
   createTicket,
   updateTicket,
-  getLicenses,
   generateLicense,
   verifyLicenseByCode,
   verifyLicenseByGuild
