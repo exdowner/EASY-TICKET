@@ -42,35 +42,170 @@ module.exports = {
 
     // ====== BOTÃO: EDIT TÍTULO ======
     if (interaction.customId === 'edit_title') {
-      return interaction.reply({
+      await interaction.reply({
         content: '📝 **Digite o novo título:**\n(Envie uma mensagem com o título)',
         ephemeral: true
       });
+      
+      const filter = m => m.author.id === interaction.user.id;
+      const collector = interaction.channel.createMessageCollector({
+        filter,
+        max: 1,
+        time: 60000
+      });
+
+      collector.on('collect', async (message) => {
+        const content = message.content.trim();
+        const config = await getConfig(interaction.guildId) || { embedConfig: {} };
+        if (!config.embedConfig) config.embedConfig = {};
+        config.embedConfig.title = content;
+        await updateConfig(interaction.guildId, { embedConfig: config.embedConfig });
+        await interaction.followUp({
+          content: `✅ Título atualizado para: **${content}**`,
+          ephemeral: true
+        });
+      });
+
+      collector.on('end', async (collected) => {
+        if (collected.size === 0) {
+          await interaction.followUp({
+            content: '⏰ Tempo esgotado! Use /config-edit novamente.',
+            ephemeral: true
+          });
+        }
+      });
+      
+      return;
     }
 
     // ====== BOTÃO: EDIT DESCRIÇÃO ======
     if (interaction.customId === 'edit_description') {
-      return interaction.reply({
+      await interaction.reply({
         content: '📄 **Digite a nova descrição:**\n(Envie uma mensagem com a descrição)',
         ephemeral: true
       });
+      
+      const filter = m => m.author.id === interaction.user.id;
+      const collector = interaction.channel.createMessageCollector({
+        filter,
+        max: 1,
+        time: 60000
+      });
+
+      collector.on('collect', async (message) => {
+        const content = message.content.trim();
+        const config = await getConfig(interaction.guildId) || { embedConfig: {} };
+        if (!config.embedConfig) config.embedConfig = {};
+        config.embedConfig.description = content;
+        await updateConfig(interaction.guildId, { embedConfig: config.embedConfig });
+        await interaction.followUp({
+          content: `✅ Descrição atualizada para:\n${content}`,
+          ephemeral: true
+        });
+      });
+
+      collector.on('end', async (collected) => {
+        if (collected.size === 0) {
+          await interaction.followUp({
+            content: '⏰ Tempo esgotado! Use /config-edit novamente.',
+            ephemeral: true
+          });
+        }
+      });
+      
+      return;
     }
 
     // ====== BOTÃO: EDIT COR ======
     if (interaction.customId === 'edit_color') {
-      return interaction.reply({
+      await interaction.reply({
         content: '🎨 **Digite a nova cor:**\n(Ex: #5865F2 ou #FF0000)',
         ephemeral: true
       });
+      
+      const filter = m => m.author.id === interaction.user.id;
+      const collector = interaction.channel.createMessageCollector({
+        filter,
+        max: 1,
+        time: 60000
+      });
+
+      collector.on('collect', async (message) => {
+        const content = message.content.trim();
+        if (!/^#?[0-9A-Fa-f]{6}$/.test(content)) {
+          return interaction.followUp({
+            content: '❌ Cor inválida! Use formato #RRGGBB (ex: #5865F2)',
+            ephemeral: true
+          });
+        }
+        const config = await getConfig(interaction.guildId) || { embedConfig: {} };
+        if (!config.embedConfig) config.embedConfig = {};
+        config.embedConfig.color = content.startsWith('#') ? content : `#${content}`;
+        await updateConfig(interaction.guildId, { embedConfig: config.embedConfig });
+        await interaction.followUp({
+          content: `✅ Cor atualizada para: ${content}`,
+          ephemeral: true
+        });
+      });
+
+      collector.on('end', async (collected) => {
+        if (collected.size === 0) {
+          await interaction.followUp({
+            content: '⏰ Tempo esgotado! Use /config-edit novamente.',
+            ephemeral: true
+          });
+        }
+      });
+      
+      return;
     }
 
     // ====== BOTÃO: ADICIONAR CATEGORIA ======
     if (interaction.customId === 'add_category') {
-      return interaction.reply({
+      await interaction.reply({
         content: '➕ **Adicionar categoria:**\nEnvie no formato:\n`Nome | identificador`\n\nEx: `Suporte | suporte`',
         ephemeral: true
       });
+      
+      const filter = m => m.author.id === interaction.user.id;
+      const collector = interaction.channel.createMessageCollector({
+        filter,
+        max: 1,
+        time: 60000
+      });
+
+      collector.on('collect', async (message) => {
+        const content = message.content.trim();
+        const parts = content.split('|').map(s => s.trim());
+        if (parts.length < 2) {
+          return interaction.followUp({
+            content: '❌ Formato inválido! Use: `Nome | identificador`',
+            ephemeral: true
+          });
+        }
+        const [label, value] = parts;
+        const config = await getConfig(interaction.guildId) || { categories: [] };
+        if (!config.categories) config.categories = [];
+        config.categories.push({ label, value: value.toLowerCase().replace(/\s/g, '_') });
+        await updateConfig(interaction.guildId, { categories: config.categories });
+        await interaction.followUp({
+          content: `✅ Categoria adicionada: **${label}** (ID: \`${value}\`)`,
+          ephemeral: true
+        });
+      });
+
+      collector.on('end', async (collected) => {
+        if (collected.size === 0) {
+          await interaction.followUp({
+            content: '⏰ Tempo esgotado! Use /config-edit novamente.',
+            ephemeral: true
+          });
+        }
+      });
+      
+      return;
     }
+EOFcat >> src/events/interactionCreate.js << 'EOF'
 
     // ====== BOTÃO: REMOVER CATEGORIA ======
     if (interaction.customId === 'remove_category') {
@@ -83,10 +218,49 @@ module.exports = {
         });
       }
 
-      return interaction.reply({
+      await interaction.reply({
         content: `📋 **Categorias disponíveis:**\n${categories.map((cat, i) => `${i+1}. ${cat.label} (\`${cat.value}\`)`).join('\n')}\n\n**Digite o ID da categoria que deseja remover:**`,
         ephemeral: true
       });
+
+      const filter = m => m.author.id === interaction.user.id;
+      const collector = interaction.channel.createMessageCollector({
+        filter,
+        max: 1,
+        time: 60000
+      });
+
+      collector.on('collect', async (message) => {
+        const categoryId = message.content.trim();
+        const config = await getConfig(interaction.guildId);
+        const categories = config?.categories || [];
+        const filtered = categories.filter(c => c.value !== categoryId);
+        
+        if (filtered.length === categories.length) {
+          return interaction.followUp({
+            content: `❌ Categoria \`${categoryId}\` não encontrada!`,
+            ephemeral: true
+          });
+        }
+        
+        config.categories = filtered;
+        await updateConfig(interaction.guildId, { categories: config.categories });
+        await interaction.followUp({
+          content: `✅ Categoria \`${categoryId}\` removida!`,
+          ephemeral: true
+        });
+      });
+
+      collector.on('end', async (collected) => {
+        if (collected.size === 0) {
+          await interaction.followUp({
+            content: '⏰ Tempo esgotado! Use /config-edit novamente.',
+            ephemeral: true
+          });
+        }
+      });
+      
+      return;
     }
 
     // ====== BOTÃO: LISTAR CATEGORIAS ======
@@ -387,101 +561,6 @@ module.exports = {
           await logChannel.send({ embeds: [logEmbed] });
         }
       }
-    }
-
-    // ====== COLLECTOR PARA MENSAGENS ======
-    if (interaction.isButton()) {
-      const filter = m => m.author.id === interaction.user.id;
-      const collector = interaction.channel.createMessageCollector({
-        filter,
-        max: 1,
-        time: 60000
-      });
-
-      collector.on('collect', async (message) => {
-        const content = message.content.trim();
-        const guildId = interaction.guildId;
-        const config = await getConfig(guildId) || { embedConfig: {} };
-
-        if (interaction.customId === 'edit_title') {
-          if (!config.embedConfig) config.embedConfig = {};
-          config.embedConfig.title = content;
-          await updateConfig(guildId, { embedConfig: config.embedConfig });
-          await interaction.followUp({
-            content: `✅ Título atualizado para: **${content}**`,
-            ephemeral: true
-          });
-        }
-        else if (interaction.customId === 'edit_description') {
-          if (!config.embedConfig) config.embedConfig = {};
-          config.embedConfig.description = content;
-          await updateConfig(guildId, { embedConfig: config.embedConfig });
-          await interaction.followUp({
-            content: `✅ Descrição atualizada para:\n${content}`,
-            ephemeral: true
-          });
-        }
-        else if (interaction.customId === 'edit_color') {
-          if (!/^#?[0-9A-Fa-f]{6}$/.test(content)) {
-            return interaction.followUp({
-              content: '❌ Cor inválida! Use formato #RRGGBB (ex: #5865F2)',
-              ephemeral: true
-            });
-          }
-          if (!config.embedConfig) config.embedConfig = {};
-          config.embedConfig.color = content.startsWith('#') ? content : `#${content}`;
-          await updateConfig(guildId, { embedConfig: config.embedConfig });
-          await interaction.followUp({
-            content: `✅ Cor atualizada para: ${content}`,
-            ephemeral: true
-          });
-        }
-        else if (interaction.customId === 'add_category') {
-          const parts = content.split('|').map(s => s.trim());
-          if (parts.length < 2) {
-            return interaction.followUp({
-              content: '❌ Formato inválido! Use: `Nome | identificador`',
-              ephemeral: true
-            });
-          }
-          const [label, value] = parts;
-          if (!config.categories) config.categories = [];
-          config.categories.push({ label, value: value.toLowerCase().replace(/\s/g, '_') });
-          await updateConfig(guildId, { categories: config.categories });
-          await interaction.followUp({
-            content: `✅ Categoria adicionada: **${label}** (ID: \`${value}\`)`,
-            ephemeral: true
-          });
-        }
-        else if (interaction.customId === 'remove_category') {
-          const categoryId = content.trim();
-          const categories = config?.categories || [];
-          const filtered = categories.filter(c => c.value !== categoryId);
-          
-          if (filtered.length === categories.length) {
-            return interaction.followUp({
-              content: `❌ Categoria \`${categoryId}\` não encontrada!`,
-              ephemeral: true
-            });
-          }
-          
-          config.categories = filtered;
-          await updateConfig(guildId, { categories: config.categories });
-          await interaction.followUp({
-            content: `✅ Categoria \`${categoryId}\` removida!`,
-            ephemeral: true
-          });
-        }
-      });
-
-      collector.on('end', async (collected) => {
-        if (collected.size === 0) {
-          await interaction.followUp({
-            content: '⏰ Tempo esgotado! Use /config-edit novamente.',
-            ephemeral: true
-          });
-        }
-      });
     }
   }
 };
