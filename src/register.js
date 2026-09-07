@@ -28,26 +28,10 @@ const commands = [
     .setName('panel')
     .setDescription('Criar painel de tickets'),
 
-  // ====== GERAR ======
+  // ====== COMPRAR (NOVO) ======
   new SlashCommandBuilder()
-    .setName('gerar')
-    .setDescription('Gerar uma licença (SÓ O DONO)')
-    .addStringOption(opt => opt
-      .setName('tipo')
-      .setDescription('Tipo de licença')
-      .setRequired(true)
-      .addChoices(
-        { name: '📅 30 Dias', value: '30' },
-        { name: '📅 60 Dias', value: '60' },
-        { name: '📅 90 Dias', value: '90' },
-        { name: '♾️ Vitalício', value: 'vitalicio' }
-      )),
-
-  // ====== VERIFICAR ======
-  new SlashCommandBuilder()
-    .setName('verificar')
-    .setDescription('Verificar e ativar sua licença')
-    .addStringOption(opt => opt.setName('codigo').setDescription('Código da licença').setRequired(true)),
+    .setName('comprar')
+    .setDescription('Solicitar licença do EASY TICKET'),
 
   // ====== CONFIG-EDIT ======
   new SlashCommandBuilder()
