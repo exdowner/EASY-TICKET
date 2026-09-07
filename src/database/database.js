@@ -1,15 +1,20 @@
 const fs = require('fs');
 const path = require('path');
 
-// ====== PASTA PERSISTENTE NO RENDER ======
-// O Render mantém a pasta /tmp por mais tempo
+// ====== PASTA PERSISTENTE ======
 const DATA_DIR = process.env.RENDER ? '/tmp/easy-ticket-data' : path.join(__dirname, '..', 'data');
 const CONFIGS_FILE = path.join(DATA_DIR, 'configs.json');
 const TICKETS_FILE = path.join(DATA_DIR, 'tickets.json');
+const LICENSES_FILE = path.join(DATA_DIR, 'licenses.json');
 
-// Criar pasta se não existir
+// ====== CRIAR PASTA SE NÃO EXISTIR ======
 if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    console.log(`📁 Pasta criada: ${DATA_DIR}`);
+  } catch (e) {
+    console.error('❌ Erro ao criar pasta:', e);
+  }
 }
 
 // ====== FUNÇÕES AUXILIARES ======
@@ -93,6 +98,54 @@ function updateTicket(channelId, updates) {
   return tickets[index];
 }
 
+// ====== LICENÇAS ======
+function getLicenses() {
+  return readJSON(LICENSES_FILE);
+}
+
+function saveLicenses(licenses) {
+  writeJSON(LICENSES_FILE, licenses);
+}
+
+function generateLicense(guildId, buyerName, days = 30) {
+  const licenses = getLicenses();
+  const filtered = licenses.filter(l => l.guildId !== guildId);
+  const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+  
+  const license = {
+    code: code,
+    guildId: guildId,
+    buyerName: buyerName,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString(),
+    status: 'active'
+  };
+  
+  filtered.push(license);
+  saveLicenses(filtered);
+  return license;
+}
+
+function verifyLicenseByCode(code) {
+  const licenses = getLicenses();
+  const license = licenses.find(l => 
+    l.code === code && 
+    l.status === 'active' &&
+    new Date(l.expiresAt) > new Date()
+  );
+  return license || null;
+}
+
+function verifyLicenseByGuild(guildId) {
+  const licenses = getLicenses();
+  const license = licenses.find(l => 
+    l.guildId === guildId && 
+    l.status === 'active' &&
+    new Date(l.expiresAt) > new Date()
+  );
+  return license || null;
+}
+
 // ====== EXPORTAR ======
 module.exports = {
   getConfig,
@@ -101,5 +154,9 @@ module.exports = {
   getTickets,
   getTicket,
   createTicket,
-  updateTicket
+  updateTicket,
+  getLicenses,
+  generateLicense,
+  verifyLicenseByCode,
+  verifyLicenseByGuild
 };
