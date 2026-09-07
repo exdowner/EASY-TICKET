@@ -1,17 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 
-// Criar pasta data se não existir
-const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+// ====== PASTA PERSISTENTE NO RENDER ======
+// O Render mantém a pasta /tmp por mais tempo
+const DATA_DIR = process.env.RENDER ? '/tmp/easy-ticket-data' : path.join(__dirname, '..', 'data');
+const CONFIGS_FILE = path.join(DATA_DIR, 'configs.json');
+const TICKETS_FILE = path.join(DATA_DIR, 'tickets.json');
+
+// Criar pasta se não existir
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Arquivos de dados
-const CONFIGS_FILE = path.join(dataDir, 'configs.json');
-const TICKETS_FILE = path.join(dataDir, 'tickets.json');
-
-// ============ FUNÇÕES AUXILIARES ============
+// ====== FUNÇÕES AUXILIARES ======
 function readJSON(file) {
   try {
     if (!fs.existsSync(file)) {
@@ -36,42 +37,38 @@ function writeJSON(file, data) {
   }
 }
 
-// ============ CONFIGURAÇÕES ============
+// ====== CONFIGURAÇÕES ======
 function getConfig(guildId) {
   const configs = readJSON(CONFIGS_FILE);
   return configs.find(c => c.guildId === guildId) || null;
 }
 
-function setConfig(guildId, data) {
+function updateConfig(guildId, data) {
   let configs = readJSON(CONFIGS_FILE);
   const index = configs.findIndex(c => c.guildId === guildId);
   
   if (index !== -1) {
-    configs[index] = { guildId, ...data };
+    configs[index] = { ...configs[index], ...data };
   } else {
     configs.push({ guildId, ...data });
   }
   
-  return writeJSON(CONFIGS_FILE, configs);
+  writeJSON(CONFIGS_FILE, configs);
+  return getConfig(guildId);
 }
 
-function updateConfig(guildId, updates) {
+function incrementTicketCounter(guildId) {
   const config = getConfig(guildId);
-  if (!config) {
-    return setConfig(guildId, updates);
-  }
-  return setConfig(guildId, { ...config, ...updates });
+  const current = config?.ticketCounter || 0;
+  updateConfig(guildId, { ticketCounter: current + 1 });
+  return current + 1;
 }
 
-// ============ TICKETS ============
+// ====== TICKETS ======
 function getTickets(guildId, userId = null) {
   const tickets = readJSON(TICKETS_FILE);
   let filtered = tickets.filter(t => t.guildId === guildId);
-  
-  if (userId) {
-    filtered = filtered.filter(t => t.userId === userId);
-  }
-  
+  if (userId) filtered = filtered.filter(t => t.userId === userId);
   return filtered;
 }
 
@@ -83,49 +80,26 @@ function getTicket(channelId) {
 function createTicket(data) {
   const tickets = readJSON(TICKETS_FILE);
   tickets.push(data);
-  return writeJSON(TICKETS_FILE, tickets);
+  writeJSON(TICKETS_FILE, tickets);
+  return data;
 }
 
 function updateTicket(channelId, updates) {
   const tickets = readJSON(TICKETS_FILE);
   const index = tickets.findIndex(t => t.channelId === channelId);
-  
-  if (index === -1) return false;
-  
+  if (index === -1) return null;
   tickets[index] = { ...tickets[index], ...updates };
-  return writeJSON(TICKETS_FILE, tickets);
+  writeJSON(TICKETS_FILE, tickets);
+  return tickets[index];
 }
 
-function deleteTicket(channelId) {
-  let tickets = readJSON(TICKETS_FILE);
-  tickets = tickets.filter(t => t.channelId !== channelId);
-  return writeJSON(TICKETS_FILE, tickets);
-}
-
-function getTicketCounter(guildId) {
-  const config = getConfig(guildId);
-  return config?.ticketCounter || 0;
-}
-
-function incrementTicketCounter(guildId) {
-  const config = getConfig(guildId);
-  const current = config?.ticketCounter || 0;
-  updateConfig(guildId, { ticketCounter: current + 1 });
-  return current + 1;
-}
-
-// ============ EXPORTAR ============
+// ====== EXPORTAR ======
 module.exports = {
   getConfig,
-  setConfig,
   updateConfig,
+  incrementTicketCounter,
   getTickets,
   getTicket,
   createTicket,
-  updateTicket,
-  deleteTicket,
-  getTicketCounter,
-  incrementTicketCounter,
-  readJSON,
-  writeJSON
+  updateTicket
 };

@@ -60,8 +60,13 @@ client.on('interactionCreate', async (interaction) => {
   try {
     await command.execute(interaction);
   } catch (error) {
-    console.error(error);
-    await interaction.reply({ content: '❌ Erro ao executar!', ephemeral: true });
+    console.error('❌ Erro no comando:', error);
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ 
+        content: '❌ Erro ao executar o comando!', 
+        ephemeral: true 
+      });
+    }
   }
 });
 
