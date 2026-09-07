@@ -5,18 +5,16 @@ const {
   getTickets, 
   createTicket, 
   updateTicket,
-  incrementTicketCounter 
+  incrementTicketCounter,
+  verifyLicenseByGuild
 } = require('../database/database');
-const { verifyLicenseByGuild } = require('../database/licenses');
 
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
     // ====== VERIFICAR LICENÇA ======
-    // Comandos que NÃO precisam de licença (públicos)
     const publicCommands = ['verificar', 'gerar'];
     
-    // Se for um comando slash e NÃO estiver na lista de públicos
     if (interaction.isCommand() && !publicCommands.includes(interaction.commandName)) {
       const license = verifyLicenseByGuild(interaction.guildId);
       
@@ -31,7 +29,7 @@ module.exports = {
       }
     }
 
-    // ====== SÓ PROCESSAR BOTÕES E SELECT MENU DAQUI PRA BAIXO ======
+    // ====== BOTÕES E SELECT MENU ======
     if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
 
     const config = getConfig(interaction.guildId);
@@ -42,24 +40,26 @@ module.exports = {
       });
     }
 
+    // ====== PEGAR CATEGORIAS PERSONALIZADAS ======
+    const categories = config.categories || [
+      { label: '🛒 Venda de Bot', value: 'venda', description: 'Comprar um bot' },
+      { label: '🔧 Suporte Técnico', value: 'suporte', description: 'Ajuda com bots' },
+      { label: '❓ Dúvidas', value: 'duvida', description: 'Tirar dúvidas' },
+      { label: '⚠️ Reclamação', value: 'reclamacao', description: 'Reportar problema' }
+    ];
+
     // ====== BOTÃO: ABRIR TICKET ======
     if (interaction.customId === 'open_ticket') {
+      const maxTickets = config.maxTicketsPerUser || 3;
       const userTickets = getTickets(interaction.guildId, interaction.user.id)
         .filter(t => t.status === 'open' || t.status === 'claimed');
 
-      if (userTickets.length >= 3) {
+      if (userTickets.length >= maxTickets) {
         return interaction.reply({ 
-          content: '❌ Você já tem 3 tickets abertos!', 
+          content: `❌ Você já tem ${maxTickets} tickets abertos!`, 
           ephemeral: true 
         });
       }
-
-      const categories = [
-        { label: '🛒 Venda de Bot', value: 'venda' },
-        { label: '🔧 Suporte Técnico', value: 'suporte' },
-        { label: '❓ Dúvidas', value: 'duvida' },
-        { label: '⚠️ Reclamação', value: 'reclamacao' }
-      ];
 
       const embed = new EmbedBuilder()
         .setTitle('🎫 Selecionar Categoria')
@@ -76,7 +76,8 @@ module.exports = {
           max_values: 1,
           options: categories.map(cat => ({ 
             label: cat.label, 
-            value: cat.value 
+            value: cat.value,
+            description: cat.description || ''
           }))
         }]
       };
@@ -224,12 +225,10 @@ module.exports = {
     // ====== SELECT MENU: CATEGORIA ======
     if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_category') {
       const category = interaction.values[0];
-      const categoryLabels = {
-        venda: '🛒 Venda de Bot',
-        suporte: '🔧 Suporte Técnico',
-        duvida: '❓ Dúvidas',
-        reclamacao: '⚠️ Reclamação'
-      };
+      
+      // Encontrar a categoria selecionada
+      const selectedCategory = categories.find(c => c.value === category);
+      const categoryLabel = selectedCategory ? selectedCategory.label : category;
 
       const ticketCount = incrementTicketCounter(interaction.guildId);
 
@@ -257,7 +256,7 @@ module.exports = {
         userName: interaction.user.username,
         userTag: interaction.user.tag,
         category: category,
-        categoryLabel: categoryLabels[category],
+        categoryLabel: categoryLabel,
         status: 'open',
         createdAt: new Date().toISOString()
       };
@@ -265,7 +264,7 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setTitle('🎫 Ticket Aberto')
-        .setDescription(`**Categoria:** ${categoryLabels[category]}\n**Usuário:** ${interaction.user}`)
+        .setDescription(`**Categoria:** ${categoryLabel}\n**Usuário:** ${interaction.user}`)
         .addFields(
           { name: '📝 Instruções', value: 'Descreva seu problema para agilizar o atendimento.' },
           { name: '⏱️ Resposta', value: 'Até 5 minutos' }
@@ -303,7 +302,7 @@ module.exports = {
             .setTitle('🎫 Ticket Criado')
             .addFields(
               { name: 'Usuário', value: interaction.user.tag, inline: true },
-              { name: 'Categoria', value: categoryLabels[category], inline: true },
+              { name: 'Categoria', value: categoryLabel, inline: true },
               { name: 'Canal', value: channel.toString(), inline: true }
             )
             .setColor('#00FF00')
