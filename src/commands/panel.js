@@ -8,68 +8,17 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
   async execute(interaction) {
+    // Defer a resposta para evitar timeout e duplicidade
+    await interaction.deferReply({ ephemeral: true });
+
     try {
-      const guildId = interaction.guildId;
-      console.log(`📋 /panel executado no servidor ${guildId}`);
+      const config = await getConfig(interaction.guildId);
       
-      const config = getConfig(guildId);
-      console.log(`📊 Config do servidor:`, config);
-      
-      if (!config) {
-        console.log(`❌ Servidor ${guildId} sem configuração`);
-        return interaction.reply({
-          content: '❌ Servidor não configurado! Use `/config` primeiro.',
-          ephemeral: true
+      if (!config || !config.categoryId || !config.supportRoleId) {
+        return interaction.editReply({
+          content: '❌ Configure primeiro:\n`/config category`\n`/config support`'
         });
       }
-
-      // ====== VERIFICA SE TEM CATEGORIA ======
-      if (!config.categoryId) {
-        console.log(`❌ Servidor ${guildId} sem categoria`);
-        return interaction.reply({
-          content: '❌ Categoria não definida! Use `/config category`.',
-          ephemeral: true
-        });
-      }
-
-      // ====== VERIFICA SE TEM CARGO ======
-      if (!config.supportRoleId) {
-        console.log(`❌ Servidor ${guildId} sem cargo de suporte`);
-        return interaction.reply({
-          content: '❌ Cargo de suporte não definido! Use `/config support`.',
-          ephemeral: true
-        });
-      }
-
-      // ====== VERIFICA SE A CATEGORIA EXISTE ======
-      const category = await interaction.guild.channels.fetch(config.categoryId).catch(err => {
-        console.log(`❌ Erro ao buscar categoria ${config.categoryId}:`, err.message);
-        return null;
-      });
-      
-      if (!category) {
-        console.log(`❌ Categoria ${config.categoryId} não encontrada no servidor ${guildId}`);
-        return interaction.reply({
-          content: '❌ A categoria configurada foi deletada! Use `/config category` novamente.',
-          ephemeral: true
-        });
-      }
-
-      // ====== VERIFICA SE O CARGO EXISTE ======
-      const role = await interaction.guild.roles.fetch(config.supportRoleId).catch(err => {
-        console.log(`❌ Erro ao buscar cargo ${config.supportRoleId}:`, err.message);
-        return null;
-      });
-      
-      if (!role) {
-        console.log(`❌ Cargo ${config.supportRoleId} não encontrado no servidor ${guildId}`);
-        return interaction.reply({
-          content: '❌ O cargo de suporte foi deletado! Use `/config support` novamente.',
-          ephemeral: true
-        });
-      }
-
-      console.log(`✅ Servidor ${guildId} configurado e validado`);
 
       const embed = new EmbedBuilder()
         .setTitle('🎫 EASY TICKET')
@@ -100,17 +49,18 @@ module.exports = {
         components: [row]
       });
 
-      await interaction.reply({
-        content: '✅ Painel criado com sucesso!',
-        ephemeral: true
+      await interaction.editReply({
+        content: '✅ Painel criado com sucesso!'
       });
 
     } catch (error) {
       console.error('❌ Erro no /panel:', error);
-      await interaction.reply({
-        content: `❌ Erro ao criar painel: ${error.message}`,
-        ephemeral: true
-      });
+      // Se já tiver respondido, usa editReply, senão reply
+      if (interaction.deferred) {
+        await interaction.editReply({ content: `❌ Erro ao criar painel: ${error.message}` });
+      } else {
+        await interaction.reply({ content: `❌ Erro: ${error.message}`, ephemeral: true });
+      }
     }
   }
 };
