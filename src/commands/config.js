@@ -24,15 +24,9 @@ module.exports = {
       const sub = interaction.options.getSubcommand();
       const guildId = interaction.guildId;
       
-      console.log(`🔧 /config executado no servidor ${guildId} pelo ${interaction.user.tag}`);
-      
       const embed = new EmbedBuilder()
         .setColor('#00FF00')
         .setTimestamp();
-
-      // ====== PEGA A CONFIGURAÇÃO ATUAL ======
-      const currentConfig = getConfig(guildId);
-      console.log(`📊 Config atual:`, currentConfig);
 
       if (sub === 'category') {
         const category = interaction.options.getChannel('categoria');
@@ -51,10 +45,8 @@ module.exports = {
           });
         }
         
-        // ====== SALVA E VERIFICA ======
-        updateConfig(guildId, { categoryId: category.id });
-        const savedConfig = getConfig(guildId);
-        console.log(`✅ Categoria salva:`, savedConfig);
+        await updateConfig(guildId, { categoryId: category.id });
+        const savedConfig = await getConfig(guildId);
         
         embed.setTitle('✅ Categoria Definida')
           .setDescription(`📁 **${category.name}** (ID: \`${category.id}\`)`)
@@ -72,9 +64,8 @@ module.exports = {
           });
         }
         
-        updateConfig(guildId, { supportRoleId: role.id });
-        const savedConfig = getConfig(guildId);
-        console.log(`✅ Cargo salvo:`, savedConfig);
+        await updateConfig(guildId, { supportRoleId: role.id });
+        const savedConfig = await getConfig(guildId);
         
         embed.setTitle('✅ Cargo de Suporte Definido')
           .setDescription(`👤 **${role.name}** (ID: \`${role.id}\`)`)
@@ -99,9 +90,8 @@ module.exports = {
           });
         }
         
-        updateConfig(guildId, { logChannelId: channel.id });
-        const savedConfig = getConfig(guildId);
-        console.log(`✅ Logs salvos:`, savedConfig);
+        await updateConfig(guildId, { logChannelId: channel.id });
+        const savedConfig = await getConfig(guildId);
         
         embed.setTitle('✅ Canal de Logs Definido')
           .setDescription(`📝 **${channel.name}** (ID: \`${channel.id}\`)`)
@@ -110,8 +100,7 @@ module.exports = {
           );
       }
 
-      // ====== MOSTRA CONFIGURAÇÃO COMPLETA ======
-      const finalConfig = getConfig(guildId);
+      const finalConfig = await getConfig(guildId);
       embed.addFields(
         { name: '📁 Categoria', value: finalConfig?.categoryId ? `✅ \`${finalConfig.categoryId}\`` : '❌ Não definida', inline: true },
         { name: '👤 Suporte', value: finalConfig?.supportRoleId ? `✅ \`${finalConfig.supportRoleId}\`` : '❌ Não definido', inline: true },
