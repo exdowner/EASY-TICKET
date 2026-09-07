@@ -205,7 +205,6 @@ module.exports = {
       
       return;
     }
-EOFcat >> src/events/interactionCreate.js << 'EOF'
 
     // ====== BOTÃO: REMOVER CATEGORIA ======
     if (interaction.customId === 'remove_category') {
