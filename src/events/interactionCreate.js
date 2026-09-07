@@ -13,10 +13,10 @@ module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
     // ====== VERIFICAR LICENÇA ======
-    const publicCommands = ['verificar', 'gerar'];
+    const publicCommands = ['verificar', 'gerar', 'config-edit'];
     
     if (interaction.isCommand() && !publicCommands.includes(interaction.commandName)) {
-      const license = verifyLicenseByGuild(interaction.guildId);
+      const license = await verifyLicenseByGuild(interaction.guildId);
       
       if (!license) {
         return interaction.reply({
@@ -32,7 +32,7 @@ module.exports = {
     // ====== BOTÕES E SELECT MENU ======
     if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
 
-    const config = getConfig(interaction.guildId);
+    const config = await getConfig(interaction.guildId);
     if (!config) {
       return interaction.reply({ 
         content: '❌ Servidor não configurado! Use /config', 
@@ -129,7 +129,7 @@ module.exports = {
     // ====== BOTÃO: ABRIR TICKET ======
     if (interaction.customId === 'open_ticket') {
       const maxTickets = config.maxTicketsPerUser || 3;
-      const userTickets = getTickets(interaction.guildId, interaction.user.id)
+      const userTickets = await getTickets(interaction.guildId, interaction.user.id)
         .filter(t => t.status === 'open' || t.status === 'claimed');
 
       if (userTickets.length >= maxTickets) {
@@ -169,7 +169,7 @@ module.exports = {
 
     // ====== BOTÃO: MEUS TICKETS ======
     if (interaction.customId === 'my_tickets') {
-      const tickets = getTickets(interaction.guildId, interaction.user.id)
+      const tickets = await getTickets(interaction.guildId, interaction.user.id)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5);
 
@@ -199,7 +199,7 @@ module.exports = {
 
     // ====== BOTÃO: FECHAR TICKET ======
     if (interaction.customId === 'close_ticket') {
-      const ticket = getTicket(interaction.channelId);
+      const ticket = await getTicket(interaction.channelId);
       
       if (!ticket || (ticket.status !== 'open' && ticket.status !== 'claimed')) {
         return interaction.reply({ 
@@ -232,7 +232,7 @@ module.exports = {
           `[${msg.createdAt.toLocaleString()}] ${msg.author.tag}: ${msg.content}`
         ).join('\n');
 
-        updateTicket(interaction.channelId, {
+        await updateTicket(interaction.channelId, {
           status: 'closed',
           closedAt: new Date().toISOString(),
           transcript: transcript
@@ -267,7 +267,7 @@ module.exports = {
 
     // ====== BOTÃO: REIVINDICAR ======
     if (interaction.customId === 'claim_ticket') {
-      const ticket = getTicket(interaction.channelId);
+      const ticket = await getTicket(interaction.channelId);
       
       if (!ticket || ticket.status !== 'open') {
         return interaction.reply({ 
@@ -286,7 +286,7 @@ module.exports = {
         });
       }
 
-      updateTicket(interaction.channelId, {
+      await updateTicket(interaction.channelId, {
         status: 'claimed',
         claimedBy: interaction.user.id,
         claimedByName: interaction.user.tag
@@ -307,7 +307,7 @@ module.exports = {
       const selectedCategory = categories.find(c => c.value === category);
       const categoryLabel = selectedCategory ? selectedCategory.label : category;
 
-      const ticketCount = incrementTicketCounter(interaction.guildId);
+      const ticketCount = await incrementTicketCounter(interaction.guildId);
 
       const channel = await interaction.guild.channels.create({
         name: `ticket-${ticketCount}`,
@@ -337,7 +337,7 @@ module.exports = {
         status: 'open',
         createdAt: new Date().toISOString()
       };
-      createTicket(ticketData);
+      await createTicket(ticketData);
 
       const embed = new EmbedBuilder()
         .setTitle('🎫 Ticket Aberto')
@@ -401,12 +401,12 @@ module.exports = {
       collector.on('collect', async (message) => {
         const content = message.content.trim();
         const guildId = interaction.guildId;
-        const config = getConfig(guildId) || { embedConfig: {} };
+        const config = await getConfig(guildId) || { embedConfig: {} };
 
         if (interaction.customId === 'edit_title') {
           if (!config.embedConfig) config.embedConfig = {};
           config.embedConfig.title = content;
-          updateConfig(guildId, { embedConfig: config.embedConfig });
+          await updateConfig(guildId, { embedConfig: config.embedConfig });
           await interaction.followUp({
             content: `✅ Título atualizado para: **${content}**`,
             ephemeral: true
@@ -415,7 +415,7 @@ module.exports = {
         else if (interaction.customId === 'edit_description') {
           if (!config.embedConfig) config.embedConfig = {};
           config.embedConfig.description = content;
-          updateConfig(guildId, { embedConfig: config.embedConfig });
+          await updateConfig(guildId, { embedConfig: config.embedConfig });
           await interaction.followUp({
             content: `✅ Descrição atualizada para:\n${content}`,
             ephemeral: true
@@ -430,7 +430,7 @@ module.exports = {
           }
           if (!config.embedConfig) config.embedConfig = {};
           config.embedConfig.color = content.startsWith('#') ? content : `#${content}`;
-          updateConfig(guildId, { embedConfig: config.embedConfig });
+          await updateConfig(guildId, { embedConfig: config.embedConfig });
           await interaction.followUp({
             content: `✅ Cor atualizada para: ${content}`,
             ephemeral: true
@@ -447,7 +447,7 @@ module.exports = {
           const [label, value] = parts;
           if (!config.categories) config.categories = [];
           config.categories.push({ label, value: value.toLowerCase().replace(/\s/g, '_') });
-          updateConfig(guildId, { categories: config.categories });
+          await updateConfig(guildId, { categories: config.categories });
           await interaction.followUp({
             content: `✅ Categoria adicionada: **${label}** (ID: \`${value}\`)`,
             ephemeral: true
@@ -466,7 +466,7 @@ module.exports = {
           }
           
           config.categories = filtered;
-          updateConfig(guildId, { categories: config.categories });
+          await updateConfig(guildId, { categories: config.categories });
           await interaction.followUp({
             content: `✅ Categoria \`${categoryId}\` removida!`,
             ephemeral: true
