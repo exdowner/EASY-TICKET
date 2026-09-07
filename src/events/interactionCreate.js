@@ -377,7 +377,7 @@ module.exports = {
         components: []
       });
       return;
-    }	    // ====== PEGAR CATEGORIAS PERSONALIZADAS ======
+    }    // ====== PEGAR CATEGORIAS PERSONALIZADAS ======
     const categories = config.categories || [
       { label: '🛒 Venda de Bot', value: 'venda', description: 'Comprar um bot' },
       { label: '🔧 Suporte Técnico', value: 'suporte', description: 'Ajuda com bots' },

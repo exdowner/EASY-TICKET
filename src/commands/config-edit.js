@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require('discord.js');
-const { updateConfig, getConfig } = require('../database/database');
+const { getConfig } = require('../database/database');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -9,12 +9,11 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      const config = getConfig(interaction.guildId);
+      const config = await getConfig(interaction.guildId);
       
-      // ====== MENU PRINCIPAL ======
       const embed = new EmbedBuilder()
         .setTitle('⚙️ Configurações - EASY TICKET')
-        .setDescription('Clique no botão abaixo para editar:')
+        .setDescription('Clique em um botão abaixo para editar:')
         .setColor('#5865F2')
         .addFields(
           { name: '📝 Título', value: config?.embedConfig?.title || '🎫 EASY TICKET', inline: true },
