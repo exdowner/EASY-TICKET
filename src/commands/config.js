@@ -21,6 +21,9 @@ module.exports = {
 
   async execute(interaction) {
     try {
+      // ====== DEFER PRA EVITAR TIMEOUT ======
+      await interaction.deferReply({ ephemeral: true });
+
       const sub = interaction.options.getSubcommand();
       const guildId = interaction.guildId;
       
@@ -32,16 +35,12 @@ module.exports = {
         const category = interaction.options.getChannel('categoria');
         
         if (!category) {
-          return interaction.reply({
-            content: '❌ Categoria não encontrada!',
-            ephemeral: true
-          });
+          return interaction.editReply({ content: '❌ Categoria não encontrada!' });
         }
         
         if (category.type !== 4) {
-          return interaction.reply({
-            content: '❌ Isso não é uma categoria! Selecione uma **categoria** (as que ficam agrupando canais).',
-            ephemeral: true
+          return interaction.editReply({ 
+            content: '❌ Isso não é uma categoria! Selecione uma **categoria** (as que ficam agrupando canais).'
           });
         }
         
@@ -58,10 +57,7 @@ module.exports = {
         const role = interaction.options.getRole('cargo');
         
         if (!role) {
-          return interaction.reply({
-            content: '❌ Cargo não encontrado!',
-            ephemeral: true
-          });
+          return interaction.editReply({ content: '❌ Cargo não encontrado!' });
         }
         
         await updateConfig(guildId, { supportRoleId: role.id });
@@ -77,16 +73,12 @@ module.exports = {
         const channel = interaction.options.getChannel('canal');
         
         if (!channel) {
-          return interaction.reply({
-            content: '❌ Canal não encontrado!',
-            ephemeral: true
-          });
+          return interaction.editReply({ content: '❌ Canal não encontrado!' });
         }
         
         if (channel.type !== 0) {
-          return interaction.reply({
-            content: '❌ Isso não é um canal de texto! Selecione um canal de texto normal.',
-            ephemeral: true
+          return interaction.editReply({ 
+            content: '❌ Isso não é um canal de texto! Selecione um canal de texto normal.'
           });
         }
         
@@ -107,14 +99,15 @@ module.exports = {
         { name: '📝 Logs', value: finalConfig?.logChannelId ? `✅ \`${finalConfig.logChannelId}\`` : '❌ Não definido', inline: true }
       );
 
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.editReply({ embeds: [embed] });
 
     } catch (error) {
       console.error('❌ Erro no /config:', error);
-      await interaction.reply({
-        content: `❌ Erro ao configurar: ${error.message}`,
-        ephemeral: true
-      });
+      try {
+        await interaction.editReply({ content: `❌ Erro ao configurar: ${error.message}` });
+      } catch (e) {
+        await interaction.followUp({ content: `❌ Erro: ${error.message}`, ephemeral: true });
+      }
     }
   }
 };
