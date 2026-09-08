@@ -18,13 +18,16 @@ module.exports = {
     if (interaction.isCommand() && !publicCommands.includes(interaction.commandName)) {
       const license = await verifyLicenseByGuild(interaction.guildId);
       if (!license) {
-        return interaction.reply({
-          content: '🔐 **Servidor não licenciado!**\n\n' +
-                   'Para solicitar uma licença, use:\n' +
-                   '`/comprar`\n\n' +
-                   'Entre em contato com o suporte para mais informações.',
-          ephemeral: true
-        });
+        if (!interaction.replied && !interaction.deferred) {
+          return interaction.reply({
+            content: '🔐 **Servidor não licenciado!**\n\n' +
+                     'Para solicitar uma licença, use:\n' +
+                     '`/comprar`\n\n' +
+                     'Entre em contato com o suporte para mais informações.',
+            ephemeral: true
+          });
+        }
+        return;
       }
     }
 
@@ -33,10 +36,13 @@ module.exports = {
 
     const config = await getConfig(interaction.guildId);
     if (!config) {
-      return interaction.reply({ 
-        content: '❌ Servidor não configurado! Use /config', 
-        ephemeral: true 
-      });
+      if (!interaction.replied && !interaction.deferred) {
+        return interaction.reply({ 
+          content: '❌ Servidor não configurado! Use /config', 
+          ephemeral: true 
+        });
+      }
+      return;
     }
 
     // ====== BOTÃO: EDIT TÍTULO ======
