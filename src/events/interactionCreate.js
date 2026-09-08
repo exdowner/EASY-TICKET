@@ -196,10 +196,10 @@ module.exports = {
     // ====== BOTÃO: ABRIR TICKET ======
     if (interaction.customId === 'open_ticket') {
       const maxTickets = config.maxTicketsPerUser || 3;
-      const userTickets = await getTickets(interaction.guildId, interaction.user.id)
-        .filter(t => t.status === 'open' || t.status === 'claimed');
+      const userTickets = await getTickets(interaction.guildId, interaction.user.id);
+      const openTickets = userTickets.filter(t => t.status === 'open' || t.status === 'claimed');
 
-      if (userTickets.length >= maxTickets) {
+      if (openTickets.length >= maxTickets) {
         return interaction.reply({ 
           content: `❌ Você já tem ${maxTickets} tickets abertos!`, 
           ephemeral: true 
@@ -236,11 +236,11 @@ module.exports = {
 
     // ====== BOTÃO: MEUS TICKETS ======
     if (interaction.customId === 'my_tickets') {
-      const tickets = await getTickets(interaction.guildId, interaction.user.id)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5);
+      const tickets = await getTickets(interaction.guildId, interaction.user.id);
+      const sorted = tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const recent = sorted.slice(0, 5);
 
-      if (tickets.length === 0) {
+      if (recent.length === 0) {
         return interaction.reply({ 
           content: '📭 Você não tem nenhum ticket.', 
           ephemeral: true 
@@ -251,7 +251,7 @@ module.exports = {
         .setTitle('📋 Meus Tickets')
         .setColor('#5865F2');
 
-      tickets.forEach((ticket, i) => {
+      recent.forEach((ticket, i) => {
         const status = ticket.status === 'open' ? '🟢 Aberto' :
                        ticket.status === 'claimed' ? '🟡 Em atendimento' : '🔴 Fechado';
         embed.addFields({
