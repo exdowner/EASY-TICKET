@@ -12,15 +12,14 @@ const {
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
-    // ====== COMANDOS PÚBLICOS (NÃO PRECISAM DE UNLOCK) ======
+    // ====== COMANDOS PÚBLICOS ======
     const publicCommands = ['unlock'];
     
     if (interaction.isCommand() && !publicCommands.includes(interaction.commandName)) {
       const unlocked = await isUnlocked(interaction.guildId);
       if (!unlocked) {
         return interaction.reply({
-          content: '🔐 **Servidor bloqueado!**\n\n' +
-                   'Peça ao dono do bot para liberar este servidor.',
+          content: '🔐 **Servidor bloqueado!**\n\nPeça ao dono do bot para liberar este servidor.',
           ephemeral: true
         });
       }
@@ -40,7 +39,7 @@ module.exports = {
     // ====== BOTÃO: EDIT TÍTULO ======
     if (interaction.customId === 'edit_title') {
       await interaction.reply({
-        content: '📝 **Digite o novo título:**\n(Envie uma mensagem com o título)',
+        content: '📝 **Digite o novo título:**',
         ephemeral: true
       });
       const filter = m => m.author.id === interaction.user.id;
@@ -64,7 +63,7 @@ module.exports = {
     // ====== BOTÃO: EDIT DESCRIÇÃO ======
     if (interaction.customId === 'edit_description') {
       await interaction.reply({
-        content: '📄 **Digite a nova descrição:**\n(Envie uma mensagem com a descrição)',
+        content: '📄 **Digite a nova descrição:**',
         ephemeral: true
       });
       const filter = m => m.author.id === interaction.user.id;
@@ -88,7 +87,7 @@ module.exports = {
     // ====== BOTÃO: EDIT COR ======
     if (interaction.customId === 'edit_color') {
       await interaction.reply({
-        content: '🎨 **Digite a nova cor:**\n(Ex: #5865F2 ou #FF0000)',
+        content: '🎨 **Digite a nova cor:** (Ex: #5865F2)',
         ephemeral: true
       });
       const filter = m => m.author.id === interaction.user.id;
@@ -185,7 +184,7 @@ module.exports = {
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    // ====== PEGAR CATEGORIAS PERSONALIZADAS ======
+    // ====== PEGAR CATEGORIAS ======
     const categories = config.categories || [
       { label: '🛒 Venda de Bot', value: 'venda', description: 'Comprar um bot' },
       { label: '🔧 Suporte Técnico', value: 'suporte', description: 'Ajuda com bots' },
@@ -195,73 +194,89 @@ module.exports = {
 
     // ====== BOTÃO: ABRIR TICKET ======
     if (interaction.customId === 'open_ticket') {
-      const maxTickets = config.maxTicketsPerUser || 3;
-      const userTickets = await getTickets(interaction.guildId, interaction.user.id);
-      const openTickets = userTickets.filter(t => t.status === 'open' || t.status === 'claimed');
+      try {
+        const maxTickets = config.maxTicketsPerUser || 3;
+        const userTickets = await getTickets(interaction.guildId, interaction.user.id);
+        const openTickets = userTickets.filter(t => t.status === 'open' || t.status === 'claimed');
 
-      if (openTickets.length >= maxTickets) {
+        if (openTickets.length >= maxTickets) {
+          return interaction.reply({ 
+            content: `❌ Você já tem ${maxTickets} tickets abertos!`, 
+            ephemeral: true 
+          });
+        }
+
+        const embed = new EmbedBuilder()
+          .setTitle('🎫 Selecionar Categoria')
+          .setDescription('Escolha a categoria do seu ticket:')
+          .setColor('#5865F2');
+
+        const row = {
+          type: 1,
+          components: [{
+            type: 3,
+            custom_id: 'ticket_category',
+            placeholder: 'Selecione uma categoria...',
+            min_values: 1,
+            max_values: 1,
+            options: categories.map(cat => ({ 
+              label: cat.label, 
+              value: cat.value,
+              description: cat.description || ''
+            }))
+          }]
+        };
+
         return interaction.reply({ 
-          content: `❌ Você já tem ${maxTickets} tickets abertos!`, 
+          embeds: [embed], 
+          components: [row], 
           ephemeral: true 
         });
+      } catch (error) {
+        console.error('❌ Erro no open_ticket:', error);
+        return interaction.reply({
+          content: '❌ Erro ao abrir ticket. Tente novamente.',
+          ephemeral: true
+        });
       }
-
-      const embed = new EmbedBuilder()
-        .setTitle('🎫 Selecionar Categoria')
-        .setDescription('Escolha a categoria do seu ticket:')
-        .setColor('#5865F2');
-
-      const row = {
-        type: 1,
-        components: [{
-          type: 3,
-          custom_id: 'ticket_category',
-          placeholder: 'Selecione uma categoria...',
-          min_values: 1,
-          max_values: 1,
-          options: categories.map(cat => ({ 
-            label: cat.label, 
-            value: cat.value,
-            description: cat.description || ''
-          }))
-        }]
-      };
-
-      return interaction.reply({ 
-        embeds: [embed], 
-        components: [row], 
-        ephemeral: true 
-      });
     }
 
     // ====== BOTÃO: MEUS TICKETS ======
     if (interaction.customId === 'my_tickets') {
-      const tickets = await getTickets(interaction.guildId, interaction.user.id);
-      const sorted = tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      const recent = sorted.slice(0, 5);
+      try {
+        const tickets = await getTickets(interaction.guildId, interaction.user.id);
+        const sorted = tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const recent = sorted.slice(0, 5);
 
-      if (recent.length === 0) {
-        return interaction.reply({ 
-          content: '📭 Você não tem nenhum ticket.', 
-          ephemeral: true 
+        if (recent.length === 0) {
+          return interaction.reply({ 
+            content: '📭 Você não tem nenhum ticket.', 
+            ephemeral: true 
+          });
+        }
+
+        const embed = new EmbedBuilder()
+          .setTitle('📋 Meus Tickets')
+          .setColor('#5865F2');
+
+        recent.forEach((ticket, i) => {
+          const status = ticket.status === 'open' ? '🟢 Aberto' :
+                         ticket.status === 'claimed' ? '🟡 Em atendimento' : '🔴 Fechado';
+          embed.addFields({
+            name: `${i+1}. ${ticket.categoryLabel || 'Sem categoria'}`,
+            value: `Status: ${status}\nCriado: ${new Date(ticket.createdAt).toLocaleString()}`,
+            inline: false
+          });
+        });
+
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      } catch (error) {
+        console.error('❌ Erro no my_tickets:', error);
+        return interaction.reply({
+          content: '❌ Erro ao buscar tickets. Tente novamente.',
+          ephemeral: true
         });
       }
-
-      const embed = new EmbedBuilder()
-        .setTitle('📋 Meus Tickets')
-        .setColor('#5865F2');
-
-      recent.forEach((ticket, i) => {
-        const status = ticket.status === 'open' ? '🟢 Aberto' :
-                       ticket.status === 'claimed' ? '🟡 Em atendimento' : '🔴 Fechado';
-        embed.addFields({
-          name: `${i+1}. ${ticket.categoryLabel || 'Sem categoria'}`,
-          value: `Status: ${status}\nCriado: ${new Date(ticket.createdAt).toLocaleString()}`,
-          inline: false
-        });
-      });
-
-      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     // ====== BOTÃO: FECHAR TICKET ======
@@ -369,90 +384,90 @@ module.exports = {
 
     // ====== SELECT MENU: CATEGORIA ======
     if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_category') {
-      const category = interaction.values[0];
-      
-      const selectedCategory = categories.find(c => c.value === category);
-      const categoryLabel = selectedCategory ? selectedCategory.label : category;
+      try {
+        const category = interaction.values[0];
+        const selectedCategory = categories.find(c => c.value === category);
+        const categoryLabel = selectedCategory ? selectedCategory.label : category;
+        const ticketCount = await incrementTicketCounter(interaction.guildId);
 
-      const ticketCount = await incrementTicketCounter(interaction.guildId);
+        const channel = await interaction.guild.channels.create({
+          name: `ticket-${ticketCount}`,
+          type: ChannelType.GuildText,
+          parent: config.categoryId,
+          permissionOverwrites: [
+            { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+            { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+            { id: config.supportRoleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+          ]
+        });
 
-      const channel = await interaction.guild.channels.create({
-        name: `ticket-${ticketCount}`,
-        type: ChannelType.GuildText,
-        parent: config.categoryId,
-        permissionOverwrites: [
-          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { 
-            id: interaction.user.id, 
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] 
-          },
-          { 
-            id: config.supportRoleId, 
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] 
+        const ticketData = {
+          guildId: interaction.guildId,
+          channelId: channel.id,
+          userId: interaction.user.id,
+          userName: interaction.user.username,
+          userTag: interaction.user.tag,
+          category: category,
+          categoryLabel: categoryLabel,
+          status: 'open',
+          createdAt: new Date().toISOString()
+        };
+        await createTicket(ticketData);
+
+        const embed = new EmbedBuilder()
+          .setTitle('🎫 Ticket Aberto')
+          .setDescription(`**Categoria:** ${categoryLabel}\n**Usuário:** ${interaction.user}`)
+          .addFields(
+            { name: '📝 Instruções', value: 'Descreva seu problema para agilizar o atendimento.' },
+            { name: '⏱️ Resposta', value: 'Até 5 minutos' }
+          )
+          .setColor('#00FF00')
+          .setTimestamp();
+
+        const row = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('claim_ticket')
+              .setLabel('👋 Reivindicar')
+              .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId('close_ticket')
+              .setLabel('🔒 Fechar')
+              .setStyle(ButtonStyle.Danger)
+          );
+
+        await channel.send({
+          content: `${interaction.user} ${config.supportRoleId ? `<@&${config.supportRoleId}>` : ''}`,
+          embeds: [embed],
+          components: [row]
+        });
+
+        await interaction.reply({ 
+          content: `✅ Ticket criado! ${channel}`, 
+          ephemeral: true 
+        });
+
+        if (config.logChannelId) {
+          const logChannel = interaction.guild.channels.cache.get(config.logChannelId);
+          if (logChannel) {
+            const logEmbed = new EmbedBuilder()
+              .setTitle('🎫 Ticket Criado')
+              .addFields(
+                { name: 'Usuário', value: interaction.user.tag, inline: true },
+                { name: 'Categoria', value: categoryLabel, inline: true },
+                { name: 'Canal', value: channel.toString(), inline: true }
+              )
+              .setColor('#00FF00')
+              .setTimestamp();
+            await logChannel.send({ embeds: [logEmbed] });
           }
-        ]
-      });
-
-      const ticketData = {
-        guildId: interaction.guildId,
-        channelId: channel.id,
-        userId: interaction.user.id,
-        userName: interaction.user.username,
-        userTag: interaction.user.tag,
-        category: category,
-        categoryLabel: categoryLabel,
-        status: 'open',
-        createdAt: new Date().toISOString()
-      };
-      await createTicket(ticketData);
-
-      const embed = new EmbedBuilder()
-        .setTitle('🎫 Ticket Aberto')
-        .setDescription(`**Categoria:** ${categoryLabel}\n**Usuário:** ${interaction.user}`)
-        .addFields(
-          { name: '📝 Instruções', value: 'Descreva seu problema para agilizar o atendimento.' },
-          { name: '⏱️ Resposta', value: 'Até 5 minutos' }
-        )
-        .setColor('#00FF00')
-        .setTimestamp();
-
-      const row = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId('claim_ticket')
-            .setLabel('👋 Reivindicar')
-            .setStyle(ButtonStyle.Primary),
-          new ButtonBuilder()
-            .setCustomId('close_ticket')
-            .setLabel('🔒 Fechar')
-            .setStyle(ButtonStyle.Danger)
-        );
-
-      await channel.send({
-        content: `${interaction.user} ${config.supportRoleId ? `<@&${config.supportRoleId}>` : ''}`,
-        embeds: [embed],
-        components: [row]
-      });
-
-      await interaction.reply({ 
-        content: `✅ Ticket criado! ${channel}`, 
-        ephemeral: true 
-      });
-
-      if (config.logChannelId) {
-        const logChannel = interaction.guild.channels.cache.get(config.logChannelId);
-        if (logChannel) {
-          const logEmbed = new EmbedBuilder()
-            .setTitle('🎫 Ticket Criado')
-            .addFields(
-              { name: 'Usuário', value: interaction.user.tag, inline: true },
-              { name: 'Categoria', value: categoryLabel, inline: true },
-              { name: 'Canal', value: channel.toString(), inline: true }
-            )
-            .setColor('#00FF00')
-            .setTimestamp();
-          await logChannel.send({ embeds: [logEmbed] });
         }
+      } catch (error) {
+        console.error('❌ Erro no select menu:', error);
+        return interaction.reply({
+          content: '❌ Erro ao criar ticket. Tente novamente.',
+          ephemeral: true
+        });
       }
     }
   }
