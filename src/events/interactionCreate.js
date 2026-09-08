@@ -13,7 +13,7 @@ module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
     // ====== VERIFICAR LICENÇA ======
-    const publicCommands = ['comprar', 'config-edit'];
+    const publicCommands = ['comprar'];
     
     if (interaction.isCommand() && !publicCommands.includes(interaction.commandName)) {
       const license = await verifyLicenseByGuild(interaction.guildId);
