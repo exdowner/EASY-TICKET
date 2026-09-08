@@ -6,7 +6,6 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
 const commands = [
-  // ====== CONFIG ======
   new SlashCommandBuilder()
     .setName('config')
     .setDescription('Configurar o EASY TICKET')
@@ -23,17 +22,14 @@ const commands = [
       .setDescription('Define o canal de logs')
       .addChannelOption(opt => opt.setName('canal').setDescription('Canal de logs').setRequired(true))),
 
-  // ====== PANEL ======
   new SlashCommandBuilder()
     .setName('panel')
     .setDescription('Criar painel de tickets'),
 
-  // ====== COMPRAR (NOVO) ======
   new SlashCommandBuilder()
-    .setName('comprar')
-    .setDescription('Solicitar licença do EASY TICKET'),
+    .setName('unlock')
+    .setDescription('Liberar um servidor para usar o bot (SÓ O DONO)'),
 
-  // ====== CONFIG-EDIT ======
   new SlashCommandBuilder()
     .setName('config-edit')
     .setDescription('Editar configurações do sistema')
@@ -48,8 +44,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
       Routes.applicationCommands(CLIENT_ID),
       { body: commands.map(cmd => cmd.toJSON()) }
     );
-    console.log('✅ Comandos registrados com sucesso!');
-    console.log(`📋 Comandos: ${commands.map(c => c.name).join(', ')}`);
+    console.log('✅ Comandos registrados: config, panel, unlock, config-edit');
   } catch (error) {
     console.error('❌ Erro:', error.message);
   }

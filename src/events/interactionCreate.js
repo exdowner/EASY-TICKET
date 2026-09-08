@@ -6,28 +6,23 @@ const {
   createTicket, 
   updateTicket,
   incrementTicketCounter,
-  verifyLicenseByGuild
+  isUnlocked
 } = require('../database/database');
 
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
-    // ====== VERIFICAR LICENÇA ======
-    const publicCommands = ['comprar'];
+    // ====== COMANDOS PÚBLICOS (NÃO PRECISAM DE UNLOCK) ======
+    const publicCommands = ['unlock'];
     
     if (interaction.isCommand() && !publicCommands.includes(interaction.commandName)) {
-      const license = await verifyLicenseByGuild(interaction.guildId);
-      if (!license) {
-        if (!interaction.replied && !interaction.deferred) {
-          return interaction.reply({
-            content: '🔐 **Servidor não licenciado!**\n\n' +
-                     'Para solicitar uma licença, use:\n' +
-                     '`/comprar`\n\n' +
-                     'Entre em contato com o suporte para mais informações.',
-            ephemeral: true
-          });
-        }
-        return;
+      const unlocked = await isUnlocked(interaction.guildId);
+      if (!unlocked) {
+        return interaction.reply({
+          content: '🔐 **Servidor bloqueado!**\n\n' +
+                   'Peça ao dono do bot para liberar este servidor.',
+          ephemeral: true
+        });
       }
     }
 
@@ -36,13 +31,10 @@ module.exports = {
 
     const config = await getConfig(interaction.guildId);
     if (!config) {
-      if (!interaction.replied && !interaction.deferred) {
-        return interaction.reply({ 
-          content: '❌ Servidor não configurado! Use /config', 
-          ephemeral: true 
-        });
-      }
-      return;
+      return interaction.reply({ 
+        content: '❌ Servidor não configurado! Use /config', 
+        ephemeral: true 
+      });
     }
 
     // ====== BOTÃO: EDIT TÍTULO ======
@@ -193,197 +185,7 @@ module.exports = {
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    // ====== BOTÃO: SOLICITAR LICENÇA ======
-    if (interaction.customId === 'solicitar_licenca') {
-      const Request = require('../models/Request');
-      const License = require('../models/License');
-      
-      const existingLicense = await verifyLicenseByGuild(interaction.guildId);
-      if (existingLicense) {
-        return interaction.reply({
-          content: '✅ **Este servidor já está licenciado!**',
-          ephemeral: true
-        });
-      }
-
-      const existingRequest = await Request.findOne({ 
-        guildId: interaction.guildId,
-        status: 'pending'
-      });
-      
-      if (existingRequest) {
-        return interaction.reply({
-          content: '⏳ **Você já tem uma solicitação pendente!**\nAguardando aprovação do dono.',
-          ephemeral: true
-        });
-      }
-
-      const request = new Request({
-        guildId: interaction.guildId,
-        guildName: interaction.guild.name,
-        userId: interaction.user.id,
-        userName: interaction.user.username,
-        userTag: interaction.user.tag,
-        status: 'pending'
-      });
-      await request.save();
-
-      const CHANNEL_ID = '1546579248020459654';
-      const channel = await interaction.client.channels.fetch(CHANNEL_ID);
-      
-      if (!channel) {
-        return interaction.reply({
-          content: '❌ Erro ao enviar solicitação. Contate o suporte.',
-          ephemeral: true
-        });
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle('📋 Nova Solicitação de Licença')
-        .setDescription('Alguém solicitou uma licença do **EASY TICKET**!')
-        .setColor('#FFA500')
-        .addFields(
-          { name: '🆔 Servidor', value: `**${interaction.guild.name}**`, inline: true },
-          { name: '📌 ID do Servidor', value: `\`${interaction.guildId}\``, inline: true },
-          { name: '👤 Solicitante', value: `${interaction.user.tag} (${interaction.user.id})`, inline: false },
-          { name: '📅 Data', value: `<t:${Math.floor(Date.now()/1000)}:F>`, inline: true },
-          { name: '👥 Membros', value: `${interaction.guild.memberCount} membros`, inline: true }
-        )
-        .setFooter({ text: 'EASY TICKET - Sistema de Licenças' })
-        .setTimestamp();
-
-      const row = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId(`aprovar_${interaction.guildId}`)
-            .setLabel('✅ Aprovar')
-            .setStyle(ButtonStyle.Success),
-          new ButtonBuilder()
-            .setCustomId(`recusar_${interaction.guildId}`)
-            .setLabel('❌ Recusar')
-            .setStyle(ButtonStyle.Danger)
-        );
-
-      await channel.send({
-        content: `<@1320305759120134174> Nova solicitação!`,
-        embeds: [embed],
-        components: [row]
-      });
-
-      await interaction.reply({
-        content: '✅ **Solicitação enviada!**\nAguarde a aprovação do dono.',
-        ephemeral: true
-      });
-      return;
-    }
-
-    // ====== BOTÃO: APROVAR LICENÇA ======
-    if (interaction.customId && interaction.customId.startsWith('aprovar_')) {
-      const ownerId = '1320305759120134174';
-      if (interaction.user.id !== ownerId) {
-        return interaction.reply({
-          content: '❌ Apenas o dono do bot pode aprovar licenças.',
-          ephemeral: true
-        });
-      }
-
-      const guildId = interaction.customId.replace('aprovar_', '');
-      const Request = require('../models/Request');
-      const License = require('../models/License');
-      
-      const request = await Request.findOne({ guildId, status: 'pending' });
-      if (!request) {
-        return interaction.reply({
-          content: '❌ Solicitação não encontrada.',
-          ephemeral: true
-        });
-      }
-
-      request.status = 'approved';
-      request.approvedAt = new Date();
-      request.approvedBy = interaction.user.id;
-      await request.save();
-
-      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const license = new License({
-        code,
-        guildId: request.guildId,
-        buyerName: request.userName,
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-        status: 'active'
-      });
-      await license.save();
-
-      const client = await interaction.client.users.fetch(request.userId);
-      if (client) {
-        await client.send({
-          content: `✅ **Licença aprovada!**\n\n` +
-                   `📝 Código: \`${code}\`\n` +
-                   `🆔 Servidor: **${request.guildName}**\n` +
-                   `📅 Válida por 1 ano.\n\n` +
-                   `Agora você pode usar os comandos:\n` +
-                   `\`/config category\`\n` +
-                   `\`/config support\`\n` +
-                   `\`/config logs\`\n` +
-                   `\`/panel\``
-        });
-      }
-
-      await interaction.reply({
-        content: `✅ **Licença aprovada!**\nCódigo: \`${code}\`\nServidor: ${request.guildName}\nUsuário notificado.`,
-        ephemeral: true
-      });
-
-      await interaction.message.edit({
-        embeds: [interaction.message.embeds[0].setColor('#00FF00').setTitle('✅ Licença Aprovada')],
-        components: []
-      });
-      return;
-    }
-
-    // ====== BOTÃO: RECUSAR LICENÇA ======
-    if (interaction.customId && interaction.customId.startsWith('recusar_')) {
-      const ownerId = '1320305759120134174';
-      if (interaction.user.id !== ownerId) {
-        return interaction.reply({
-          content: '❌ Apenas o dono do bot pode recusar licenças.',
-          ephemeral: true
-        });
-      }
-
-      const guildId = interaction.customId.replace('recusar_', '');
-      const Request = require('../models/Request');
-      
-      const request = await Request.findOne({ guildId, status: 'pending' });
-      if (!request) {
-        return interaction.reply({
-          content: '❌ Solicitação não encontrada.',
-          ephemeral: true
-        });
-      }
-
-      request.status = 'rejected';
-      await request.save();
-
-      const client = await interaction.client.users.fetch(request.userId);
-      if (client) {
-        await client.send({
-          content: `❌ **Solicitação de licença recusada.**\n\n` +
-                   `Entre em contato com o suporte para mais informações.`
-        });
-      }
-
-      await interaction.reply({
-        content: `❌ **Licença recusada!**\nServidor: ${request.guildName}`,
-        ephemeral: true
-      });
-
-      await interaction.message.edit({
-        embeds: [interaction.message.embeds[0].setColor('#FF0000').setTitle('❌ Licença Recusada')],
-        components: []
-      });
-      return;
-    }    // ====== PEGAR CATEGORIAS PERSONALIZADAS ======
+    // ====== PEGAR CATEGORIAS PERSONALIZADAS ======
     const categories = config.categories || [
       { label: '🛒 Venda de Bot', value: 'venda', description: 'Comprar um bot' },
       { label: '🔧 Suporte Técnico', value: 'suporte', description: 'Ajuda com bots' },

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const ConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
+  unlocked: { type: Boolean, default: false },
   categoryId: String,
   supportRoleId: String,
   logChannelId: String,

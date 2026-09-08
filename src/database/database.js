@@ -1,6 +1,5 @@
 const Config = require('../models/Config');
 const Ticket = require('../models/Ticket');
-const License = require('../models/License');
 
 // ====== CONFIGURAÇÕES ======
 async function getConfig(guildId) {
@@ -48,60 +47,18 @@ async function updateTicket(channelId, updates) {
   );
 }
 
-// ====== LICENÇAS ======
-async function generateLicense(guildId, buyerName, days = 30) {
-  await License.deleteMany({ guildId });
-  
-  const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-  const license = new License({
-    code,
-    guildId,
-    buyerName,
-    expiresAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
-    status: 'active'
-  });
-  return await license.save();
+// ====== UNLOCK (SALVAR SERVIDOR LIBERADO) ======
+async function unlockGuild(guildId) {
+  return await Config.findOneAndUpdate(
+    { guildId },
+    { guildId, unlocked: true },
+    { upsert: true, new: true }
+  );
 }
 
-async function verifyLicenseByCode(code) {
-  return await License.findOne({
-    code,
-    status: 'active',
-    expiresAt: { $gt: new Date() }
-  });
-}
-
-async function verifyLicenseByGuild(guildId) {
-  console.log(`🔍 [VERIFY] Procurando licença para: ${guildId}`);
-  
-  try {
-    const license = await License.findOne({
-      guildId: guildId,
-      status: 'active',
-      expiresAt: { $gt: new Date() }
-    });
-    
-    if (license) {
-      console.log(`✅ [VERIFY] Licença ENCONTRADA: ${license.code}`);
-      console.log(`   📅 Expira em: ${license.expiresAt}`);
-      console.log(`   👤 Comprador: ${license.buyerName}`);
-    } else {
-      console.log(`❌ [VERIFY] Licença NÃO encontrada para ${guildId}`);
-      
-      const anyLicense = await License.findOne({ guildId: guildId });
-      if (anyLicense) {
-        console.log(`⚠️ [VERIFY] Licença encontrada mas com status: ${anyLicense.status}`);
-        console.log(`   📅 Expira em: ${anyLicense.expiresAt}`);
-      } else {
-        console.log(`📭 [VERIFY] Nenhuma licença cadastrada para ${guildId}`);
-      }
-    }
-    
-    return license;
-  } catch (error) {
-    console.error(`❌ [VERIFY] Erro ao buscar licença:`, error);
-    return null;
-  }
+async function isUnlocked(guildId) {
+  const config = await Config.findOne({ guildId });
+  return config?.unlocked === true;
 }
 
 module.exports = {
@@ -112,7 +69,6 @@ module.exports = {
   getTicket,
   createTicket,
   updateTicket,
-  generateLicense,
-  verifyLicenseByCode,
-  verifyLicenseByGuild
+  unlockGuild,
+  isUnlocked
 };
